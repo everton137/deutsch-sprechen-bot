@@ -116,8 +116,12 @@ Special Commands:
             
     async def handle_default_mode(self, update: Update, transcript: str):
             """Full analysis mode with text and audio responses."""
+
+            # Send a processing response message
+            processing_response = await update.message.reply_text("Processing a response to you...")
+
             # Process the German text with GPT
-            understanding = await self.process_german_text(transcript)
+            # understanding = await self.process_german_text(transcript)
             
             # Extract and translate key words
             word_translations = await self.extract_word_translations(transcript)
@@ -128,20 +132,28 @@ Special Commands:
             
             # Store the audio response for potential transcription
             self.last_audio_response = audio_response
-            
-            # Send text responses
-            response_message = (
-                f"📝 Transcription:\n{transcript}\n\n"
-                f"💡 Understanding:\n{understanding}\n\n"
-                f"🔍 Key Words:\n{word_translations}"
+
+            await update.message.reply_text(
+                f"📝 Frage Transkription:\n{transcript} \n\n"
             )
-            await update.message.reply_text(response_message)
             
+            await processing_response.delete()
+
             # Send audio response
             with tempfile.NamedTemporaryFile(suffix='.mp3') as audio_temp:
                 audio_temp.write(audio_response)
                 audio_temp.seek(0)
                 await update.message.reply_voice(voice=audio_temp)
+
+            # Extract and translate key words
+            word_translations = await self.extract_word_translations(german_response)
+
+             # Send german_respose
+            await update.message.reply_text(
+                f"📝 Antwort Transkription:\n{german_response} \n\n"
+                f"💡 Understanding:\n{word_translations}\n\n"
+
+            )
     async def transcribe_audio(self, audio_file):
         """Transcribe audio using OpenAI's Whisper API."""
         try:
@@ -191,7 +203,8 @@ Special Commands:
                         {"role": "system", "content": (
                             "You are a friendly German-speaking assistant. "
                             "Respond to the following message in natural, conversational German. "
-                            "Keep your response concise and engaging, matching the tone of the input."
+                            "Keep your response concise and engaging, matching the tone of the input. "
+                            "In case there are grammar mistakes, suggest an improvement with a correct version and explain it."
                         )},
                         {"role": "user", "content": text}
                     ]
@@ -257,6 +270,12 @@ Special Commands:
             audio_temp.write(audio_response)
             audio_temp.seek(0)
             await update.message.reply_voice(voice=audio_temp)
+        
+        print(german_response)
+        # Send german_respose
+        await update.message.reply_text(
+            f"📝 Transkription:\n{german_response}"
+        )
 
     async def handle_transcription_mode(self, update: Update, transcript: str):
         """Transcription mode - just transcribe the input."""
